@@ -141,27 +141,21 @@ class KTC_Frontend {
             .ktc-sticky-sidebar .ktc-start-course-btn { background-color: var(--ktc-primary-color); color: #fff; display: block; width: 100%; text-align: center; padding: 15px; font-size: 1.1em; font-weight: bold; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; }
             .ktc-sticky-sidebar .ktc-start-course-btn:hover { opacity: 0.9; }
             
-            /* **UX FIX**: Re-styled the meta box for better alignment and visual balance. */
-            .ktc-sticky-sidebar .ktc-course-meta {
-                list-style: none;
-                padding: 0;
-                margin: 1.5em 0 0;
-                border: 1px solid #eee;
-                border-radius: 4px;
-            }
-            .ktc-sticky-sidebar .ktc-course-meta li {
-                margin-bottom: 0;
-                display: flex;
-                justify-content: space-between;
-                padding: 0.8em 1em;
-                border-bottom: 1px solid #eee;
-            }
-            .ktc-sticky-sidebar .ktc-course-meta li:last-child {
-                border-bottom: none;
-            }
+            .ktc-sticky-sidebar .ktc-course-meta { list-style: none; padding: 0; margin: 1.5em 0 0; border: 1px solid #eee; border-radius: 4px; }
+            .ktc-sticky-sidebar .ktc-course-meta li { margin-bottom: 0; display: flex; justify-content: space-between; padding: 0.8em 1em; border-bottom: 1px solid #eee; }
+            .ktc-sticky-sidebar .ktc-course-meta li:last-child { border-bottom: none; }
             
-            /* **UX FIX**: Made tabs equal width and removed margin for clean alignment. */
-            .ktc-course-tabs .ktc-tab-nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 1.5em; }
+            /* **UX FIX**: Implemented CSS Grid for panels to prevent layout shift and ensure consistent width. */
+            .ktc-course-tabs {
+                display: grid;
+                grid-template-rows: auto 1fr;
+            }
+            .ktc-course-tabs .ktc-tab-nav {
+                grid-row: 1;
+                display: flex;
+                border-bottom: 2px solid #ddd;
+                margin-bottom: 1.5em;
+            }
             .ktc-course-tabs .ktc-tab-nav-item {
                 flex: 1;
                 text-align: center;
@@ -170,11 +164,23 @@ class KTC_Frontend {
                 font-weight: bold;
                 color: #555;
                 border-bottom: 3px solid transparent;
-                margin-right: 0; /* Removed margin */
+                margin-right: 0;
             }
             .ktc-course-tabs .ktc-tab-nav-item.active { color: #000; border-bottom-color: #000; }
-            .ktc-course-tabs .ktc-tab-panel { display: none; }
-            .ktc-course-tabs .ktc-tab-panel.active { display: block; }
+            .ktc-course-tabs .ktc-tab-panel {
+                grid-row: 2;
+                grid-column: 1;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: opacity 0.2s ease-in-out, visibility 0s linear 0.2s; /* Fade out transition */
+            }
+            .ktc-course-tabs .ktc-tab-panel.active {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transition-delay: 0s; /* Fade in transition */
+            }
 
             .ktc-curriculum h2 { margin-bottom: 1em; font-size: 1.5em; }
             .ktc-curriculum .ktc-section-item { border: 1px solid #ddd; }
@@ -218,7 +224,6 @@ class KTC_Frontend {
             .ktc-lesson-completed-icon { color: #28a745; font-weight: bold; font-size: 1.2em; line-height: 1; }
 
             /* --- Progress Bar --- */
-            /* **UX FIX**: Added margin-bottom for spacing. */
             .ktc-progress-bar-container { margin: 1.5em 0; }
             .ktc-progress-bar-label { display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px; color: #555; }
             .ktc-progress-bar-wrapper { background: #e9ecef; border-radius: 4px; overflow: hidden; height: 10px; }
