@@ -96,9 +96,6 @@ class KTC_Frontend {
         return ob_get_clean();
     }
     
-    /**
-     * **MODIFICATION**: Get the primary color from settings and add it as a CSS variable.
-     */
     public function enqueue_frontend_assets() {
         global $post;
         if (is_singular('lesson') || is_singular('course') || (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'koptann-courses_archive'))) {
@@ -143,11 +140,38 @@ class KTC_Frontend {
             .ktc-sticky-sidebar .ktc-sidebar-content { padding: 1.5em; }
             .ktc-sticky-sidebar .ktc-start-course-btn { background-color: var(--ktc-primary-color); color: #fff; display: block; width: 100%; text-align: center; padding: 15px; font-size: 1.1em; font-weight: bold; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; }
             .ktc-sticky-sidebar .ktc-start-course-btn:hover { opacity: 0.9; }
-            .ktc-sticky-sidebar .ktc-course-meta { list-style: none; padding: 1em 0 0; margin-top: 1em; border-top: 1px solid #eee; }
-            .ktc-sticky-sidebar .ktc-course-meta li { margin-bottom: 0.5em; display: flex; justify-content: space-between; }
             
+            /* **UX FIX**: Re-styled the meta box for better alignment and visual balance. */
+            .ktc-sticky-sidebar .ktc-course-meta {
+                list-style: none;
+                padding: 0;
+                margin: 1.5em 0 0;
+                border: 1px solid #eee;
+                border-radius: 4px;
+            }
+            .ktc-sticky-sidebar .ktc-course-meta li {
+                margin-bottom: 0;
+                display: flex;
+                justify-content: space-between;
+                padding: 0.8em 1em;
+                border-bottom: 1px solid #eee;
+            }
+            .ktc-sticky-sidebar .ktc-course-meta li:last-child {
+                border-bottom: none;
+            }
+            
+            /* **UX FIX**: Made tabs equal width and removed margin for clean alignment. */
             .ktc-course-tabs .ktc-tab-nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 1.5em; }
-            .ktc-course-tabs .ktc-tab-nav-item { padding: 10px 0; margin-right: 30px; cursor: pointer; font-weight: bold; color: #555; border-bottom: 3px solid transparent; }
+            .ktc-course-tabs .ktc-tab-nav-item {
+                flex: 1;
+                text-align: center;
+                padding: 10px 0;
+                cursor: pointer;
+                font-weight: bold;
+                color: #555;
+                border-bottom: 3px solid transparent;
+                margin-right: 0; /* Removed margin */
+            }
             .ktc-course-tabs .ktc-tab-nav-item.active { color: #000; border-bottom-color: #000; }
             .ktc-course-tabs .ktc-tab-panel { display: none; }
             .ktc-course-tabs .ktc-tab-panel.active { display: block; }
@@ -194,7 +218,8 @@ class KTC_Frontend {
             .ktc-lesson-completed-icon { color: #28a745; font-weight: bold; font-size: 1.2em; line-height: 1; }
 
             /* --- Progress Bar --- */
-            .ktc-progress-bar-container { margin: 1.5em 0 0; }
+            /* **UX FIX**: Added margin-bottom for spacing. */
+            .ktc-progress-bar-container { margin: 1.5em 0; }
             .ktc-progress-bar-label { display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px; color: #555; }
             .ktc-progress-bar-wrapper { background: #e9ecef; border-radius: 4px; overflow: hidden; height: 10px; }
             .ktc-progress-bar { background: var(--ktc-primary-color); height: 100%; width: 0%; transition: width 0.4s ease-in-out; }
