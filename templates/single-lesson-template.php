@@ -4,8 +4,7 @@
  */
 
 global $post;
-$frontend = new KTC_Frontend();
-
+// **MODIFICATION**: No longer need to instantiate the frontend class here.
 $course_id = get_post_meta($post->ID, '_ktc_course_id', true);
 if (!$course_id || !($course = get_post($course_id))) {
     wp_die(__('This lesson is not associated with a valid course.', 'koptann-courses'));
@@ -26,9 +25,11 @@ get_header();
         <div class="ktc-lesson-container">
             <aside class="ktc-lesson-sidebar">
                 <div class="ktc-sidebar-header">
-                    <h3 class="ktc-course-title-sidebar">
-                        <a href="<?php echo esc_url(get_permalink($course->ID)); ?>">&larr; <?php echo esc_html($course->post_title); ?></a>
-                    </h3>
+                    <h3 class="ktc-course-title-sidebar"><?php echo esc_html($course->post_title); ?></h3>
+                    <?php // **NEW**: Added "Back to Course" link ?>
+                    <div class="ktc-back-to-course">
+                        <a href="<?php echo esc_url(get_permalink($course->ID)); ?>">&larr; <?php _e('Back to Course Details', 'koptann-courses'); ?></a>
+                    </div>
                 </div>
                 
                 <nav class="ktc-course-outline">
@@ -43,10 +44,9 @@ get_header();
                         $lessons = get_posts(['post_type' => 'lesson', 'posts_per_page' => -1, 'post_status' => 'publish', 'meta_key' => '_ktc_section_id', 'meta_value' => $section->ID, 'orderby' => 'menu_order', 'order' => 'ASC']);
                         foreach ($lessons as $lesson) {
                             $is_current = ($lesson->ID == $post->ID);
-                            $is_complete = $frontend->is_lesson_complete($lesson->ID, $user_id);
+                            $is_complete = KTC_Helpers::is_lesson_complete($lesson->ID, $user_id);
                             $class = $is_current ? 'ktc-current-lesson' : '';
                             
-                            // **MODIFICATION**: Added data-lesson-id and completion checkmark
                             echo '<li class="' . esc_attr($class) . '" data-lesson-id="' . esc_attr($lesson->ID) . '">';
                             echo '<a href="' . esc_url(get_permalink($lesson->ID)) . '">';
                             if ($is_complete) {
@@ -77,8 +77,8 @@ get_header();
 
 <footer class="ktc-lesson-footer">
     <?php 
-    $nav = $frontend->get_next_prev_lesson($post->ID);
-    $is_complete = $frontend->is_lesson_complete($post->ID, $user_id);
+    $nav = KTC_Helpers::get_next_prev_lesson($post->ID);
+    $is_complete = KTC_Helpers::is_lesson_complete($post->ID, $user_id);
     ?>
     <nav class="ktc-lesson-navigation">
         <div class="ktc-nav-previous">
@@ -87,7 +87,6 @@ get_header();
             <?php endif; ?>
         </div>
         
-        <?php // **NEW**: "Mark as Complete" button logic ?>
         <div class="ktc-nav-complete">
             <?php if (is_user_logged_in()): ?>
                 <button id="ktc-mark-complete-btn" class="<?php echo $is_complete ? 'completed' : ''; ?>">

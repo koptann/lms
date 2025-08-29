@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 final class Koptann_Courses_Plugin {
 
     private static $instance = null;
-    public $version = '1.2.0';
+    public $version = '1.3.0'; // **MODIFICATION**: Version bump
 
     public static function get_instance() {
         if (is_null(self::$instance)) {
@@ -29,6 +29,7 @@ final class Koptann_Courses_Plugin {
         require_once $plugin_path . 'includes/class-ktc-cpts.php';
         require_once $plugin_path . 'includes/class-ktc-admin.php';
         require_once $plugin_path . 'includes/class-ktc-frontend.php';
+        require_once $plugin_path . 'includes/class-ktc-helpers.php'; // **MODIFICATION**: Load the new helpers class
     }
 
     /**
@@ -60,7 +61,7 @@ final class Koptann_Courses_Plugin {
         add_action('wp_enqueue_scripts', [$frontend, 'enqueue_frontend_assets']);
         add_shortcode('koptann_courses_archive', [$frontend, 'render_courses_archive_shortcode']);
         
-        // **MODIFICATION**: Added AJAX handler for both logged-in and logged-out (though it will be blocked).
+        // Frontend AJAX Handler
         add_action('wp_ajax_ktc_mark_lesson_complete', [$frontend, 'ajax_mark_lesson_complete']);
     }
 

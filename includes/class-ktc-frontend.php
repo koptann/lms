@@ -45,6 +45,9 @@ class KTC_Frontend {
         return $template;
     }
     
+    /**
+     * **MODIFICATION**: Updated the archive shortcode to display more metadata.
+     */
     public function render_courses_archive_shortcode($atts) {
         $courses = get_posts(['post_type' => 'course', 'post_status' => 'publish', 'posts_per_page' => -1]);
         if (empty($courses)) return '<p>' . __('No courses are available.', 'koptann-courses') . '</p>';
@@ -56,13 +59,20 @@ class KTC_Frontend {
                 <button id="ktc-list-view-btn" title="<?php _e('List View', 'koptann-courses'); ?>">&#9776;</button>
             </div>
             <div id="ktc-courses-archive" class="ktc-courses-archive-grid">
-                <?php foreach($courses as $course): ?>
+                <?php foreach($courses as $course): 
+                    $is_free = get_post_meta($course->ID, '_ktc_is_free', true);
+                    $duration = KTC_Helpers::get_total_course_duration($course->ID);
+                    $lesson_count = KTC_Helpers::get_lesson_count($course->ID);
+                ?>
                     <div class="ktc-course-archive-item">
                         <a href="<?php echo esc_url(get_permalink($course->ID)); ?>" class="ktc-course-archive-image-link">
                             <?php if (has_post_thumbnail($course->ID)): 
                                 echo get_the_post_thumbnail($course->ID, 'medium_large'); 
                             else: ?>
                                 <div class="ktc-placeholder-image"></div>
+                            <?php endif; ?>
+                            <?php if ($is_free === '1'): ?>
+                                <span class="ktc-free-badge"><?php _e('Free', 'koptann-courses'); ?></span>
                             <?php endif; ?>
                         </a>
                         <div class="ktc-course-archive-content">
@@ -71,6 +81,14 @@ class KTC_Frontend {
                             </h3>
                             <div class="ktc-course-archive-excerpt">
                                 <?php echo has_excerpt($course->ID) ? wp_kses_post(get_the_excerpt($course->ID)) : wp_trim_words(wp_kses_post($course->post_content), 25, '...'); ?>
+                            </div>
+                            <div class="ktc-course-archive-meta">
+                                <?php if (!empty($duration)): ?>
+                                    <span>&#128337; <?php echo esc_html($duration); ?></span>
+                                <?php endif; ?>
+                                <?php if ($lesson_count > 0): ?>
+                                    <span>&#128210; <?php printf(_n('%s Lesson', '%s Lessons', $lesson_count, 'koptann-courses'), $lesson_count); ?></span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -93,12 +111,15 @@ class KTC_Frontend {
             .ktc-courses-archive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
             .ktc-courses-archive-list .ktc-course-archive-item { display: flex; align-items: flex-start; gap: 20px; }
             .ktc-courses-archive-list .ktc-course-archive-image-link { width: 200px; flex-shrink: 0; }
-            .ktc-course-archive-item { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; transition: box-shadow .2s; background: #fff; }
+            .ktc-course-archive-item { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; transition: box-shadow .2s; background: #fff; display: flex; flex-direction: column; }
             .ktc-course-archive-item:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .ktc-course-archive-image-link { position: relative; }
             .ktc-course-archive-image-link img, .ktc-placeholder-image { display: block; width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; background-color: #eee;}
-            .ktc-course-archive-content { padding: 15px; }
+            .ktc-free-badge { position: absolute; top: 10px; right: 10px; background: #28a745; color: #fff; padding: 4px 8px; font-size: 0.8em; font-weight: bold; border-radius: 3px; }
+            .ktc-course-archive-content { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
             .ktc-course-archive-title { font-size: 1.2em; margin: 0 0 0.5em; } .ktc-course-archive-title a { text-decoration: none; color: inherit; }
-            .ktc-course-archive-excerpt { font-size: 0.9em; color: #555; }
+            .ktc-course-archive-excerpt { font-size: 0.9em; color: #555; flex-grow: 1; }
+            .ktc-course-archive-meta { margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.85em; color: #555; display: flex; gap: 15px; }
 
             /* --- NEW & IMPROVED: Single Course Page --- */
             .ktc-single-course-page .entry-header { display: none; }
@@ -148,6 +169,7 @@ class KTC_Frontend {
             .ktc-sidebar-header { padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px 4px 0 0; background: #f5f5f5; }
             .ktc-sidebar-header .ktc-course-title-sidebar { margin: 0; font-size: 1.1em; }
             .ktc-sidebar-header .ktc-course-title-sidebar a { text-decoration: none; color: inherit; }
+            .ktc-sidebar-header .ktc-back-to-course { font-size: 0.9em; margin-top: 5px; } /* Back to course link */
             .ktc-course-outline { border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 4px 4px; }
             .ktc-outline-section-title { background: #fff; padding: 12px 15px; margin: 0; cursor: pointer; font-size: 1em; position: relative; border-top: 1px solid #e0e0e0; font-weight: bold; }
             .ktc-outline-section:first-child .ktc-outline-section-title { border-top: none; }
@@ -156,7 +178,7 @@ class KTC_Frontend {
             .ktc-outline-section.ktc-open > .ktc-outline-section-title:after { transform: translateY(-50%) rotate(90deg); }
             .ktc-outline-lesson-list { list-style: none; margin: 0; padding: 0; background: #fdfdfd; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
             .ktc-outline-section.ktc-open > .ktc-outline-lesson-list { max-height: 1000px; }
-            .ktc-outline-lesson-list li a { padding: 10px 15px 10px 30px; text-decoration: none; color: #333; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f0f0f0; transition: background-color 0.2s; }
+            .ktc-outline-lesson-list li a { padding: 10px 15px 10px 15px; text-decoration: none; color: #333; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f0f0f0; transition: background-color 0.2s; }
             .ktc-outline-lesson-list li a:hover { background: #f5f5f5; }
             .ktc-outline-lesson-list .ktc-current-lesson a { background: #e9f5ff; color: #005a9c; font-weight: bold; }
             .ktc-lesson-navigation { display: flex; justify-content: space-between; align-items: center; padding: 1em; border-top: 1px solid #eee; background: rgba(255,255,255,0.98); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
@@ -165,7 +187,7 @@ class KTC_Frontend {
             .ktc-nav-next { text-align: right; }
             #ktc-mark-complete-btn { padding: 8px 15px; font-size: 0.9em; cursor: pointer; border-radius: 4px; border: 1px solid #2271b1; background: #2271b1; color: #fff; }
             #ktc-mark-complete-btn.completed { background: #dff0d8; color: #3c763d; border-color: #d6e9c6; cursor: default; }
-            .ktc-lesson-completed-icon { color: #28a745; font-weight: bold; }
+            .ktc-lesson-completed-icon { color: #28a745; font-weight: bold; font-size: 1.2em; line-height: 1; }
 
             /* --- Progress Bar --- */
             .ktc-progress-bar-container { margin: 1.5em 0 0; }
@@ -193,7 +215,6 @@ class KTC_Frontend {
             wp_register_script('ktc-frontend-script', false, [], null, true);
             wp_enqueue_script('ktc-frontend-script');
             
-            // **MODIFICATION**: Localize script for AJAX requests on the lesson page.
             if (is_singular('lesson')) {
                 wp_localize_script('ktc-frontend-script', 'KTC_Lesson_Data', [
                     'ajax_url' => admin_url('admin-ajax.php'),
@@ -282,13 +303,11 @@ class KTC_Frontend {
                                 completeBtn.classList.add('completed');
                                 completeBtn.textContent = KTC_Lesson_Data.completed_text;
                                 
-                                // Update sidebar icon
                                 const sidebarLink = document.querySelector(`.ktc-outline-lesson-list li[data-lesson-id="${KTC_Lesson_Data.lesson_id}"] a`);
                                 if(sidebarLink && !sidebarLink.querySelector('.ktc-lesson-completed-icon')) {
                                     sidebarLink.insertAdjacentHTML('afterbegin', '<span class="ktc-lesson-completed-icon">✓</span>');
                                 }
 
-                                // Auto-advance if next lesson exists
                                 if (data.data.next_lesson_url) {
                                     window.location.href = data.data.next_lesson_url;
                                 }
@@ -305,109 +324,9 @@ class KTC_Frontend {
             wp_add_inline_script('ktc-frontend-script', ob_get_clean());
         }
     }
-    
-    public function get_next_prev_lesson($current_lesson_id) {
-        $course_id = get_post_meta($current_lesson_id, '_ktc_course_id', true);
-        if (!$course_id) {
-            return ['prev' => null, 'next' => null];
-        }
-        $ordered_lesson_ids = [];
-        $sections_query = new WP_Query([
-            'post_type'      => 'section',
-            'posts_per_page' => -1,
-            'meta_key'       => '_ktc_course_id',
-            'meta_value'     => $course_id,
-            'orderby'        => 'menu_order',
-            'order'          => 'ASC',
-            'fields'         => 'ids'
-        ]);
-        if ($sections_query->have_posts()) {
-            foreach ($sections_query->posts as $section_id) {
-                $lessons_query = new WP_Query([
-                    'post_type'      => 'lesson',
-                    'posts_per_page' => -1,
-                    'post_status'    => 'publish',
-                    'meta_key'       => '_ktc_section_id',
-                    'meta_value'     => $section_id,
-                    'orderby'        => 'menu_order',
-                    'order'          => 'ASC',
-                    'fields'         => 'ids'
-                ]);
-                if ($lessons_query->have_posts()) {
-                    $ordered_lesson_ids = array_merge($ordered_lesson_ids, $lessons_query->posts);
-                }
-            }
-        }
-        if (empty($ordered_lesson_ids)) {
-            return ['prev' => null, 'next' => null];
-        }
-        $current_key = array_search($current_lesson_id, $ordered_lesson_ids);
-        if ($current_key === false) {
-            return ['prev' => null, 'next' => null];
-        }
-        $prev_id = ($current_key > 0) ? $ordered_lesson_ids[$current_key - 1] : null;
-        $next_id = ($current_key < count($ordered_lesson_ids) - 1) ? $ordered_lesson_ids[$current_key + 1] : null;
-        return [
-            'prev' => $prev_id ? get_post($prev_id) : null,
-            'next' => $next_id ? get_post($next_id) : null,
-        ];
-    }
-    
-    public function get_first_lesson_in_course($course_id) {
-        $sections = get_posts(['post_type' => 'section', 'posts_per_page' => 1, 'meta_key' => '_ktc_course_id', 'meta_value' => $course_id, 'orderby' => 'menu_order', 'order' => 'ASC']);
-        if (empty($sections)) return null;
-        $lessons = get_posts(['post_type' => 'lesson', 'posts_per_page' => 1, 'post_status' => 'publish', 'meta_key' => '_ktc_section_id', 'meta_value' => $sections[0]->ID, 'orderby' => 'menu_order', 'order' => 'ASC']);
-        return empty($lessons) ? null : $lessons[0];
-    }
-
-    public function get_total_course_duration($course_id) {
-        $transient_key = 'ktc_total_duration_' . $course_id;
-        $cached_duration = get_transient($transient_key);
-
-        if (false !== $cached_duration) {
-            return $cached_duration;
-        }
-
-        $total_minutes = 0;
-        $lessons = get_posts([
-            'post_type' => 'lesson',
-            'posts_per_page' => -1,
-            'post_status' => 'publish',
-            'meta_key' => '_ktc_course_id',
-            'meta_value' => $course_id,
-        ]);
-
-        foreach ($lessons as $lesson) {
-            $duration = get_post_meta($lesson->ID, '_ktc_lesson_duration_minutes', true);
-            if (is_numeric($duration)) {
-                $total_minutes += intval($duration);
-            }
-        }
-
-        if ($total_minutes == 0) {
-            set_transient($transient_key, '', HOUR_IN_SECONDS);
-            return '';
-        }
-
-        $hours = floor($total_minutes / 60);
-        $minutes = $total_minutes % 60;
-
-        $duration_string = '';
-        if ($hours > 0) {
-            $duration_string .= $hours . ' ' . _n('hour', 'hours', $hours, 'koptann-courses');
-        }
-        if ($minutes > 0) {
-            $duration_string .= ' ' . $minutes . ' ' . _n('minute', 'minutes', $minutes, 'koptann-courses');
-        }
-
-        $final_duration = trim($duration_string);
-        set_transient($transient_key, $final_duration, HOUR_IN_SECONDS);
-
-        return $final_duration;
-    }
 
     /**
-     * **NEW**: AJAX handler for marking a lesson as complete.
+     * **MODIFICATION**: This method now uses the KTC_Helpers class.
      */
     public function ajax_mark_lesson_complete() {
         check_ajax_referer('ktc_mark_lesson_complete_nonce', 'security');
@@ -424,61 +343,19 @@ class KTC_Frontend {
         $user_id = get_current_user_id();
         $course_id = get_post_meta($lesson_id, '_ktc_course_id', true);
 
-        // Get current completed lessons for this course
         $completed_lessons = get_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, true);
         if (!is_array($completed_lessons)) {
             $completed_lessons = [];
         }
 
-        // Add the current lesson if it's not already there
         if (!in_array($lesson_id, $completed_lessons)) {
             $completed_lessons[] = $lesson_id;
             update_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, $completed_lessons);
         }
 
-        // Get next lesson for auto-advancement
-        $nav = $this->get_next_prev_lesson($lesson_id);
+        $nav = KTC_Helpers::get_next_prev_lesson($lesson_id);
         $next_lesson_url = $nav['next'] ? get_permalink($nav['next']->ID) : null;
 
         wp_send_json_success(['next_lesson_url' => $next_lesson_url]);
-    }
-
-    /**
-     * **NEW**: Helper function to check if a lesson is complete for the current user.
-     */
-    public function is_lesson_complete($lesson_id, $user_id = null) {
-        if (is_null($user_id)) {
-            $user_id = get_current_user_id();
-        }
-        if (!$user_id) return false;
-
-        $course_id = get_post_meta($lesson_id, '_ktc_course_id', true);
-        if (!$course_id) return false;
-
-        $completed_lessons = get_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, true);
-        return is_array($completed_lessons) && in_array($lesson_id, $completed_lessons);
-    }
-
-    /**
-     * **NEW**: Helper function to calculate course completion percentage.
-     */
-    public function get_course_progress($course_id, $user_id = null) {
-        if (is_null($user_id)) {
-            $user_id = get_current_user_id();
-        }
-        if (!$user_id) return 0;
-
-        $all_lessons_query = new WP_Query([
-            'post_type' => 'lesson', 'posts_per_page' => -1, 'post_status' => 'publish',
-            'meta_key' => '_ktc_course_id', 'meta_value' => $course_id, 'fields' => 'ids'
-        ]);
-        $total_lessons = $all_lessons_query->post_count;
-
-        if ($total_lessons === 0) return 0;
-
-        $completed_lessons = get_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, true);
-        $completed_count = is_array($completed_lessons) ? count($completed_lessons) : 0;
-
-        return round(($completed_count / $total_lessons) * 100);
     }
 }
