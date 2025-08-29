@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 final class Koptann_Courses_Plugin {
 
     private static $instance = null;
-    public $version = '1.3.0'; // **MODIFICATION**: Version bump
+    public $version = '1.4.0'; // **MODIFICATION**: Version bump
 
     public static function get_instance() {
         if (is_null(self::$instance)) {
@@ -29,12 +29,11 @@ final class Koptann_Courses_Plugin {
         require_once $plugin_path . 'includes/class-ktc-cpts.php';
         require_once $plugin_path . 'includes/class-ktc-admin.php';
         require_once $plugin_path . 'includes/class-ktc-frontend.php';
-        require_once $plugin_path . 'includes/class-ktc-helpers.php'; // **MODIFICATION**: Load the new helpers class
+        require_once $plugin_path . 'includes/class-ktc-helpers.php';
     }
 
     /**
      * Initialize all hooks for the plugin.
-     * This method instantiates the component classes and adds their actions/filters.
      */
     private function initialize_hooks() {
         $cpts = new KTC_CPTs();
@@ -48,6 +47,7 @@ final class Koptann_Courses_Plugin {
         // Admin
         add_action('admin_menu', [$admin, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$admin, 'enqueue_admin_assets']);
+        add_action('admin_init', [$admin, 'register_plugin_settings']); // **NEW**: Register settings
         
         // Admin AJAX Handlers
         add_action('wp_ajax_ktc_save_structure', [$admin, 'ajax_save_structure']);
@@ -69,7 +69,6 @@ final class Koptann_Courses_Plugin {
      * Plugin activation logic.
      */
     public static function activate() {
-        // We need to manually register CPTs here before flushing
         require_once plugin_dir_path(__FILE__) . 'class-ktc-cpts.php';
         $cpts = new KTC_CPTs();
         $cpts->register_post_types();

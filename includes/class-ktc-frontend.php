@@ -45,9 +45,6 @@ class KTC_Frontend {
         return $template;
     }
     
-    /**
-     * **MODIFICATION**: Updated the archive shortcode to display more metadata.
-     */
     public function render_courses_archive_shortcode($atts) {
         $courses = get_posts(['post_type' => 'course', 'post_status' => 'publish', 'posts_per_page' => -1]);
         if (empty($courses)) return '<p>' . __('No courses are available.', 'koptann-courses') . '</p>';
@@ -99,10 +96,18 @@ class KTC_Frontend {
         return ob_get_clean();
     }
     
+    /**
+     * **MODIFICATION**: Get the primary color from settings and add it as a CSS variable.
+     */
     public function enqueue_frontend_assets() {
         global $post;
         if (is_singular('lesson') || is_singular('course') || (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'koptann-courses_archive'))) {
+            
+            $options = get_option('ktc_options');
+            $primary_color = isset($options['primary_color']) && !empty($options['primary_color']) ? $options['primary_color'] : '#2271b1';
+
             $frontend_css = "
+            :root { --ktc-primary-color: " . esc_html($primary_color) . "; }
             /* --- Course Archive --- */
             .ktc-archive-container { margin: 2em 0; }
             .ktc-view-toggle { text-align: right; margin-bottom: 1em; }
@@ -121,7 +126,7 @@ class KTC_Frontend {
             .ktc-course-archive-excerpt { font-size: 0.9em; color: #555; flex-grow: 1; }
             .ktc-course-archive-meta { margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.85em; color: #555; display: flex; gap: 15px; }
 
-            /* --- NEW & IMPROVED: Single Course Page --- */
+            /* --- Single Course Page --- */
             .ktc-single-course-page .entry-header { display: none; }
             .ktc-course-top-bar { background: #2d2f31; color: #fff; padding: 1.5em 0; }
             .ktc-course-top-bar-inner { max-width: 1100px; margin: 0 auto; padding: 0 2em; }
@@ -136,7 +141,7 @@ class KTC_Frontend {
             .ktc-sticky-sidebar-inner { background: #fff; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-radius: 4px; }
             .ktc-sticky-sidebar .ktc-course-image img { width: 100%; display: block; border-radius: 4px 4px 0 0; }
             .ktc-sticky-sidebar .ktc-sidebar-content { padding: 1.5em; }
-            .ktc-sticky-sidebar .ktc-start-course-btn { display: block; width: 100%; text-align: center; padding: 15px; font-size: 1.1em; font-weight: bold; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; }
+            .ktc-sticky-sidebar .ktc-start-course-btn { background-color: var(--ktc-primary-color); color: #fff; display: block; width: 100%; text-align: center; padding: 15px; font-size: 1.1em; font-weight: bold; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; }
             .ktc-sticky-sidebar .ktc-start-course-btn:hover { opacity: 0.9; }
             .ktc-sticky-sidebar .ktc-course-meta { list-style: none; padding: 1em 0 0; margin-top: 1em; border-top: 1px solid #eee; }
             .ktc-sticky-sidebar .ktc-course-meta li { margin-bottom: 0.5em; display: flex; justify-content: space-between; }
@@ -168,8 +173,7 @@ class KTC_Frontend {
             .ktc-lesson-content { padding-bottom: 80px; }
             .ktc-sidebar-header { padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px 4px 0 0; background: #f5f5f5; }
             .ktc-sidebar-header .ktc-course-title-sidebar { margin: 0; font-size: 1.1em; }
-            .ktc-sidebar-header .ktc-course-title-sidebar a { text-decoration: none; color: inherit; }
-            .ktc-sidebar-header .ktc-back-to-course { font-size: 0.9em; margin-top: 5px; } /* Back to course link */
+            .ktc-sidebar-header .ktc-back-to-course { font-size: 0.9em; margin-top: 5px; }
             .ktc-course-outline { border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 4px 4px; }
             .ktc-outline-section-title { background: #fff; padding: 12px 15px; margin: 0; cursor: pointer; font-size: 1em; position: relative; border-top: 1px solid #e0e0e0; font-weight: bold; }
             .ktc-outline-section:first-child .ktc-outline-section-title { border-top: none; }
@@ -185,7 +189,7 @@ class KTC_Frontend {
             .ktc-nav-previous, .ktc-nav-next { flex-basis: 40%; }
             .ktc-nav-complete { flex-basis: 20%; text-align: center; }
             .ktc-nav-next { text-align: right; }
-            #ktc-mark-complete-btn { padding: 8px 15px; font-size: 0.9em; cursor: pointer; border-radius: 4px; border: 1px solid #2271b1; background: #2271b1; color: #fff; }
+            #ktc-mark-complete-btn { padding: 8px 15px; font-size: 0.9em; cursor: pointer; border-radius: 4px; border: 1px solid var(--ktc-primary-color); background: var(--ktc-primary-color); color: #fff; }
             #ktc-mark-complete-btn.completed { background: #dff0d8; color: #3c763d; border-color: #d6e9c6; cursor: default; }
             .ktc-lesson-completed-icon { color: #28a745; font-weight: bold; font-size: 1.2em; line-height: 1; }
 
@@ -193,7 +197,7 @@ class KTC_Frontend {
             .ktc-progress-bar-container { margin: 1.5em 0 0; }
             .ktc-progress-bar-label { display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px; color: #555; }
             .ktc-progress-bar-wrapper { background: #e9ecef; border-radius: 4px; overflow: hidden; height: 10px; }
-            .ktc-progress-bar { background: #28a745; height: 100%; width: 0%; transition: width 0.4s ease-in-out; }
+            .ktc-progress-bar { background: var(--ktc-primary-color); height: 100%; width: 0%; transition: width 0.4s ease-in-out; }
 
             /* --- Mobile Responsive Styles --- */
             #ktc-sidebar-toggle { display: none; }
@@ -204,7 +208,7 @@ class KTC_Frontend {
                 body.ktc-sidebar-open .ktc-lesson-sidebar { transform: translateX(0); box-shadow: 3px 0 15px rgba(0,0,0,0.1); }
                 body.ktc-sidebar-open #ktc-sidebar-overlay { display: block; }
                 .ktc-course-outline { flex-grow: 1; overflow-y: auto; }
-                #ktc-sidebar-toggle { display: inline-block; background: #2271b1; color: #fff; border: none; border-radius: 4px; padding: 8px 12px; font-size: 1em; cursor: pointer; margin-bottom: 1em; }
+                #ktc-sidebar-toggle { display: inline-block; background: var(--ktc-primary-color); color: #fff; border: none; border-radius: 4px; padding: 8px 12px; font-size: 1em; cursor: pointer; margin-bottom: 1em; }
                 #ktc-sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: rgba(0,0,0,0.5); }
             }
             ";
@@ -282,7 +286,7 @@ class KTC_Frontend {
                     });
                 }
 
-                // **NEW**: Mark Lesson Complete AJAX Handler
+                // --- Mark Lesson Complete AJAX Handler ---
                 const completeBtn = document.getElementById('ktc-mark-complete-btn');
                 if (completeBtn) {
                     completeBtn.addEventListener('click', function() {
@@ -325,9 +329,6 @@ class KTC_Frontend {
         }
     }
 
-    /**
-     * **MODIFICATION**: This method now uses the KTC_Helpers class.
-     */
     public function ajax_mark_lesson_complete() {
         check_ajax_referer('ktc_mark_lesson_complete_nonce', 'security');
 

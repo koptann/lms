@@ -21,6 +21,8 @@ class KTC_Admin {
         add_submenu_page( $parent_slug, __('Add New Course', 'koptann-courses'), __('Add New', 'koptann-courses'), 'edit_posts', 'post-new.php?post_type=course' );
         add_submenu_page( $parent_slug, __('Course Categories', 'koptann-courses'), __('Categories', 'koptann-courses'), 'manage_options', 'edit-tags.php?taxonomy=course_category&post_type=course' );
         add_submenu_page( $parent_slug, __('Course Tags', 'koptann-courses'), __('Tags', 'koptann-courses'), 'manage_options', 'edit-tags.php?taxonomy=course_tag&post_type=course' );
+        // **NEW**: Add the settings page.
+        add_submenu_page( $parent_slug, __('Settings', 'koptann-courses'), __('Settings', 'koptann-courses'), 'manage_options', 'ktc-settings', [$this, 'render_settings_page'] );
     }
 
     public function render_course_builder_page() {
@@ -116,131 +118,142 @@ class KTC_Admin {
     }
 
     public function enqueue_admin_assets($hook) {
-        if ('toplevel_page_koptann-course-builder' !== $hook) return;
+        // Enqueue for builder page
+        if ('koptann-courses_page_koptann-course-builder' === $hook || 'toplevel_page_koptann-course-builder' === $hook) {
+            wp_enqueue_script('jquery-ui-sortable');
+            
+            wp_localize_script('jquery-ui-sortable', 'KTC_Builder_Data', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonces'   => [
+                    'save_structure' => wp_create_nonce('ktc_save_structure_nonce'),
+                    'add_item'       => wp_create_nonce('ktc_add_item_nonce'),
+                    'update_item'    => wp_create_nonce('ktc_update_item_nonce'),
+                    'delete_item'    => wp_create_nonce('ktc_delete_item_nonce'),
+                ],
+                'prompts'  => [
+                    'new_section'    => __('Enter the name for the new section:', 'koptann-courses'),
+                    'new_lesson'     => __('Enter the name for the new lesson:', 'koptann-courses'),
+                    'rename_section' => __('Enter the new name for the section:', 'koptann-courses'),
+                    'confirm_delete' => __('Are you sure you want to permanently delete this item? This cannot be undone.', 'koptann-courses'),
+                ]
+            ]);
+            
+            $admin_css = "
+            .ktc-course-list, .ktc-section-list, .ktc-lesson-list { list-style: none; margin: 0; padding: 0; }
+            .ktc-course-item { background: #fff; border: 1px solid #ccd0d4; margin-bottom: 15px; }
+            .ktc-course-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+            .ktc-course-title { font-size: 1.2em; font-weight: bold; }
+            .ktc-sections-container { padding: 0 15px 15px; } .ktc-section-list { margin-top: 15px; }
+            .ktc-section-item { background: #f9f9f9; border: 1px solid #ddd; margin-bottom: 10px; }
+            .ktc-section-header { padding: 8px 12px; display: flex; align-items: center; background: #f0f0f1; }
+            .ktc-section-title { flex-grow: 1; font-weight: bold; } .ktc-drag-handle { cursor: move; color: #888; margin-right: 10px; }
+            .ktc-lesson-list { padding-left: 20px; min-height: 20px; }
+            .ktc-lesson-item { background: #fff; border: 1px solid #e5e5e5; padding: 6px 10px; margin: 5px 0; display: flex; align-items: center; }
+            .ktc-lesson-title { flex-grow: 1; } .ktc-item-actions { white-space: nowrap; } .ktc-item-actions a, .ktc-item-actions button { margin-left: 8px; }
+            .ktc-no-items { padding: 10px; color: #777; font-style: italic; }
+            .ktc-post-status { color: #d54e21; font-weight: normal; } .ktc-sortable-placeholder { height: 40px; border: 1px dashed #ccc; background: #f7f7f7; margin: 5px 0; }
+            .ktc-toggle-sections .dashicons { transition: transform 0.2s; } .ktc-toggle-sections.open .dashicons { transform: rotate(180deg); }
+            .button-link-delete { color: #a00 !important; border: none; background: none; box-shadow: none; padding-top: 3px !important; cursor: pointer; }
+            .button-link-delete:hover { color: #dc3232 !important; }";
+            wp_add_inline_style('wp-admin', $admin_css);
 
-        wp_enqueue_script('jquery-ui-sortable');
-        
-        wp_localize_script('jquery-ui-sortable', 'KTC_Builder_Data', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonces'   => [
-                'save_structure' => wp_create_nonce('ktc_save_structure_nonce'),
-                'add_item'       => wp_create_nonce('ktc_add_item_nonce'),
-                'update_item'    => wp_create_nonce('ktc_update_item_nonce'),
-                'delete_item'    => wp_create_nonce('ktc_delete_item_nonce'),
-            ],
-            'prompts'  => [
-                'new_section'    => __('Enter the name for the new section:', 'koptann-courses'),
-                'new_lesson'     => __('Enter the name for the new lesson:', 'koptann-courses'),
-                'rename_section' => __('Enter the new name for the section:', 'koptann-courses'),
-                'confirm_delete' => __('Are you sure you want to permanently delete this item? This cannot be undone.', 'koptann-courses'),
-            ]
-        ]);
-        
-        $admin_css = "
-        .ktc-course-list, .ktc-section-list, .ktc-lesson-list { list-style: none; margin: 0; padding: 0; }
-        .ktc-course-item { background: #fff; border: 1px solid #ccd0d4; margin-bottom: 15px; }
-        .ktc-course-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
-        .ktc-course-title { font-size: 1.2em; font-weight: bold; }
-        .ktc-sections-container { padding: 0 15px 15px; } .ktc-section-list { margin-top: 15px; }
-        .ktc-section-item { background: #f9f9f9; border: 1px solid #ddd; margin-bottom: 10px; }
-        .ktc-section-header { padding: 8px 12px; display: flex; align-items: center; background: #f0f0f1; }
-        .ktc-section-title { flex-grow: 1; font-weight: bold; } .ktc-drag-handle { cursor: move; color: #888; margin-right: 10px; }
-        .ktc-lesson-list { padding-left: 20px; min-height: 20px; }
-        .ktc-lesson-item { background: #fff; border: 1px solid #e5e5e5; padding: 6px 10px; margin: 5px 0; display: flex; align-items: center; }
-        .ktc-lesson-title { flex-grow: 1; } .ktc-item-actions { white-space: nowrap; } .ktc-item-actions a, .ktc-item-actions button { margin-left: 8px; }
-        .ktc-no-items { padding: 10px; color: #777; font-style: italic; }
-        .ktc-post-status { color: #d54e21; font-weight: normal; } .ktc-sortable-placeholder { height: 40px; border: 1px dashed #ccc; background: #f7f7f7; margin: 5px 0; }
-        .ktc-toggle-sections .dashicons { transition: transform 0.2s; } .ktc-toggle-sections.open .dashicons { transform: rotate(180deg); }
-        .button-link-delete { color: #a00 !important; border: none; background: none; box-shadow: none; padding-top: 3px !important; cursor: pointer; }
-        .button-link-delete:hover { color: #dc3232 !important; }";
-        wp_add_inline_style('wp-admin', $admin_css);
+            ob_start();
+            ?>
+            <script>
+            jQuery(function($) {
+                const builder = $('#ktc-course-builder');
+                const ajaxAction = (action, data, successCallback) => {
+                    $.post(KTC_Builder_Data.ajax_url, {
+                        action: `ktc_${action}`,
+                        security: KTC_Builder_Data.nonces[action],
+                        ...data
+                    }).done(response => {
+                        if (response.success) {
+                            successCallback(response.data);
+                        } else {
+                            alert(response.data?.message || 'An unknown error occurred.');
+                        }
+                    }).fail(() => alert('A server error occurred. Please try again.'));
+                };
 
-        ob_start();
-        ?>
-        <script>
-        jQuery(function($) {
-            const builder = $('#ktc-course-builder');
-            const ajaxAction = (action, data, successCallback) => {
-                $.post(KTC_Builder_Data.ajax_url, {
-                    action: `ktc_${action}`,
-                    security: KTC_Builder_Data.nonces[action],
-                    ...data
-                }).done(response => {
-                    if (response.success) {
-                        successCallback(response.data);
-                    } else {
-                        alert(response.data?.message || 'An unknown error occurred.');
+                const saveOrder = ($list) => {
+                    const isSection = $list.hasClass('ktc-section-list');
+                    const itemType = isSection ? 'section' : 'lesson';
+                    const items = $list.children('.ktc-' + itemType + '-item').map((index, el) => ({
+                        id: $(el).data(itemType + '-id'),
+                        order: index,
+                        parent: isSection ? $(el).closest('.ktc-section-list').data('course-id') : $(el).closest('.ktc-lesson-list').data('section-id')
+                    })).get();
+                    ajaxAction('save_structure', { item_type: itemType, items: items }, () => {});
+                };
+
+                $('.ktc-section-list, .ktc-lesson-list').sortable({
+                    handle: '.ktc-drag-handle', axis: 'y', placeholder: 'ktc-sortable-placeholder', connectWith: '.ktc-lesson-list',
+                    update: (event, ui) => {
+                        saveOrder(ui.item.parent());
+                        if (ui.sender) saveOrder(ui.sender);
                     }
-                }).fail(() => alert('A server error occurred. Please try again.'));
-            };
+                }).disableSelection();
 
-            const saveOrder = ($list) => {
-                const isSection = $list.hasClass('ktc-section-list');
-                const itemType = isSection ? 'section' : 'lesson';
-                const items = $list.children('.ktc-' + itemType + '-item').map((index, el) => ({
-                    id: $(el).data(itemType + '-id'),
-                    order: index,
-                    parent: isSection ? $(el).closest('.ktc-section-list').data('course-id') : $(el).closest('.ktc-lesson-list').data('section-id')
-                })).get();
-                ajaxAction('save_structure', { item_type: itemType, items: items }, () => {});
-            };
+                builder.on('click', '.ktc-toggle-sections', function(e) {
+                    const $button = $(this);
+                    const $courseItem = $button.closest('.ktc-course-item');
+                    const $container = $courseItem.find('.ktc-sections-container');
+                    if (!$button.hasClass('open')) {
+                        $('.ktc-course-item .ktc-toggle-sections.open').not($button).removeClass('open').closest('.ktc-course-item').find('.ktc-sections-container').slideUp(200);
+                    }
+                    $button.toggleClass('open');
+                    $container.slideToggle(200);
+                });
 
-            $('.ktc-section-list, .ktc-lesson-list').sortable({
-                handle: '.ktc-drag-handle', axis: 'y', placeholder: 'ktc-sortable-placeholder', connectWith: '.ktc-lesson-list',
-                update: (event, ui) => {
-                    saveOrder(ui.item.parent());
-                    if (ui.sender) saveOrder(ui.sender);
-                }
-            }).disableSelection();
-
-            // **ENHANCEMENT**: Make the course list a "smarter" accordion.
-            builder.on('click', '.ktc-toggle-sections', function(e) {
-                const $button = $(this);
-                const $courseItem = $button.closest('.ktc-course-item');
-                const $container = $courseItem.find('.ktc-sections-container');
-
-                // If this one is not yet open, close all others first.
-                if (!$button.hasClass('open')) {
-                    $('.ktc-course-item .ktc-toggle-sections.open').not($button).removeClass('open').closest('.ktc-course-item').find('.ktc-sections-container').slideUp(200);
-                }
-
-                // Toggle the current one.
-                $button.toggleClass('open');
-                $container.slideToggle(200);
-            });
-
-            builder.on('click', '.ktc-add-section', e => {
-                const courseId = $(e.currentTarget).closest('.ktc-course-item').data('course-id');
-                const name = prompt(KTC_Builder_Data.prompts.new_section);
-                if (name) ajaxAction('add_item', { item_type: 'section', title: name, parent_id: courseId }, data => {
-                    const $list = $(`.ktc-course-item[data-course-id="${courseId}"] .ktc-section-list`);
-                    $list.find('.ktc-no-items').remove();
-                    $list.append(data.html).sortable('refresh');
+                builder.on('click', '.ktc-add-section', e => {
+                    const courseId = $(e.currentTarget).closest('.ktc-course-item').data('course-id');
+                    const name = prompt(KTC_Builder_Data.prompts.new_section);
+                    if (name) ajaxAction('add_item', { item_type: 'section', title: name, parent_id: courseId }, data => {
+                        const $list = $(`.ktc-course-item[data-course-id="${courseId}"] .ktc-section-list`);
+                        $list.find('.ktc-no-items').remove();
+                        $list.append(data.html).sortable('refresh');
+                    });
+                });
+                builder.on('click', '.ktc-add-lesson', e => {
+                    const $section = $(e.currentTarget).closest('.ktc-section-item');
+                    const sectionId = $section.data('section-id');
+                    const courseId = $section.closest('.ktc-course-item').data('course-id');
+                    const name = prompt(KTC_Builder_Data.prompts.new_lesson);
+                    if (name) ajaxAction('add_item', { item_type: 'lesson', title: name, parent_id: sectionId, course_id: courseId }, data => {
+                        const $list = $(`.ktc-section-item[data-section-id="${sectionId}"] .ktc-lesson-list`);
+                        $list.find('.ktc-no-items').remove();
+                        $list.append(data.html).sortable('refresh');
+                    });
+                });
+                builder.on('click', '.ktc-delete-item', e => {
+                    e.preventDefault();
+                    if (!confirm(KTC_Builder_Data.prompts.confirm_delete)) return;
+                    const $item = $(e.currentTarget).closest('[data-section-id], [data-lesson-id]');
+                    const type = $item.is('.ktc-section-item') ? 'section' : 'lesson';
+                    const id = $item.data(type + '-id');
+                    ajaxAction('delete_item', { item_type: type, item_id: id }, () => $item.fadeOut(300, () => $item.remove()));
                 });
             });
-            builder.on('click', '.ktc-add-lesson', e => {
-                const $section = $(e.currentTarget).closest('.ktc-section-item');
-                const sectionId = $section.data('section-id');
-                const courseId = $section.closest('.ktc-course-item').data('course-id');
-                const name = prompt(KTC_Builder_Data.prompts.new_lesson);
-                if (name) ajaxAction('add_item', { item_type: 'lesson', title: name, parent_id: sectionId, course_id: courseId }, data => {
-                    const $list = $(`.ktc-section-item[data-section-id="${sectionId}"] .ktc-lesson-list`);
-                    $list.find('.ktc-no-items').remove();
-                    $list.append(data.html).sortable('refresh');
-                });
+            </script>
+            <?php
+            wp_add_inline_script('jquery-ui-sortable', ob_get_clean());
+        }
+
+        // **NEW**: Enqueue assets for the new settings page.
+        if ('koptann-courses_page_ktc-settings' === $hook) {
+            wp_enqueue_style('wp-color-picker');
+            wp_enqueue_script('wp-color-picker');
+            ob_start();
+            ?>
+            <script>
+            jQuery(function($) {
+                $('.ktc-color-picker').wpColorPicker();
             });
-            builder.on('click', '.ktc-delete-item', e => {
-                e.preventDefault();
-                if (!confirm(KTC_Builder_Data.prompts.confirm_delete)) return;
-                const $item = $(e.currentTarget).closest('[data-section-id], [data-lesson-id]');
-                const type = $item.is('.ktc-section-item') ? 'section' : 'lesson';
-                const id = $item.data(type + '-id');
-                ajaxAction('delete_item', { item_type: type, item_id: id }, () => $item.fadeOut(300, () => $item.remove()));
-            });
-        });
-        </script>
-        <?php
-        wp_add_inline_script('jquery-ui-sortable', ob_get_clean());
+            </script>
+            <?php
+            wp_add_inline_script('wp-color-picker', ob_get_clean());
+        }
     }
     
     public function ajax_save_structure() {
@@ -321,7 +334,6 @@ class KTC_Admin {
             update_post_meta($post_id, '_ktc_lesson_duration_minutes', $duration);
         }
 
-        // **ENHANCEMENT**: When a lesson is saved, delete the cached total duration for its course.
         $course_id = get_post_meta($post_id, '_ktc_course_id', true);
         if ($course_id) {
             delete_transient('ktc_total_duration_' . $course_id);
@@ -350,5 +362,55 @@ class KTC_Admin {
 
         $is_free = isset($_POST['ktc_is_free_field']) ? '1' : '0';
         update_post_meta($post_id, '_ktc_is_free', $is_free);
+    }
+
+    /**
+     * **NEW**: Renders the main settings page wrapper.
+     */
+    public function render_settings_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php _e('Koptann Courses Settings', 'koptann-courses'); ?></h1>
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('ktc_settings_group');
+                do_settings_sections('ktc-settings');
+                submit_button();
+                ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * **NEW**: Registers the settings, sections, and fields using the Settings API.
+     */
+    public function register_plugin_settings() {
+        register_setting('ktc_settings_group', 'ktc_options', [$this, 'sanitize_settings']);
+
+        add_settings_section('ktc_styling_section', __('Styling Options', 'koptann-courses'), null, 'ktc-settings');
+
+        add_settings_field('ktc_primary_color', __('Primary Color', 'koptann-courses'), [$this, 'render_primary_color_field'], 'ktc-settings', 'ktc_styling_section');
+    }
+
+    /**
+     * **NEW**: Renders the color picker field.
+     */
+    public function render_primary_color_field() {
+        $options = get_option('ktc_options');
+        $color = isset($options['primary_color']) ? $options['primary_color'] : '#2271b1';
+        echo '<input type="text" name="ktc_options[primary_color]" value="' . esc_attr($color) . '" class="ktc-color-picker" />';
+        echo '<p class="description">' . __('The main color for buttons and progress bars.', 'koptann-courses') . '</p>';
+    }
+
+    /**
+     * **NEW**: Sanitizes settings before saving to the database.
+     */
+    public function sanitize_settings($input) {
+        $new_input = [];
+        if (isset($input['primary_color'])) {
+            $new_input['primary_color'] = sanitize_hex_color($input['primary_color']);
+        }
+        return $new_input;
     }
 }
