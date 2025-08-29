@@ -60,7 +60,7 @@ final class Koptann_Courses_Plugin {
         add_action('wp_enqueue_scripts', [$frontend, 'enqueue_frontend_assets']);
         add_shortcode('koptann_courses_archive', [$frontend, 'render_courses_archive_shortcode']);
         
-        // Frontend AJAX Handler
+        // **MODIFICATION**: Added AJAX handler for both logged-in and logged-out (though it will be blocked).
         add_action('wp_ajax_ktc_mark_lesson_complete', [$frontend, 'ajax_mark_lesson_complete']);
     }
 

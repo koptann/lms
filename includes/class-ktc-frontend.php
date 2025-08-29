@@ -107,7 +107,7 @@ class KTC_Frontend {
             .ktc-course-top-bar .ktc-breadcrumbs { color: #ccc; font-size: 0.9em; margin-bottom: 0.5em; }
             .ktc-course-top-bar .ktc-breadcrumbs a { color: #fff; text-decoration: none; }
             .ktc-course-top-bar .entry-title { color: #fff; font-size: 2.2em; margin: 0; }
-            .ktc-course-top-bar-meta { display: flex; gap: 20px; color: #ccc; margin-top: 10px; font-size: 0.9em; }
+            .ktc-course-top-bar-meta { display: flex; flex-wrap: wrap; gap: 10px 20px; color: #ccc; margin-top: 10px; font-size: 0.9em; }
             .ktc-course-main-container { max-width: 1100px; margin: 0 auto; padding: 2em; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 40px; }
             .ktc-course-left-col { flex: 1; min-width: 0; }
             .ktc-course-right-col { width: 340px; flex-shrink: 0; }
@@ -130,7 +130,7 @@ class KTC_Frontend {
             .ktc-curriculum .ktc-section-item { border: 1px solid #ddd; }
             .ktc-curriculum .ktc-section-item + .ktc-section-item { border-top: none; }
             .ktc-curriculum .ktc-section-title { font-weight: bold; font-size: 1.1em; padding: 15px; background: #f7f7f7; cursor: pointer; position: relative; display: flex; justify-content: space-between; align-items: center; }
-            .ktc-curriculum .ktc-section-title .ktc-section-meta { font-size: 0.8em; font-weight: normal; color: #555; }
+            .ktc-curriculum .ktc-section-meta { font-size: 0.8em; font-weight: normal; color: #555; }
             .ktc-curriculum .ktc-section-title:after { content: '+'; font-weight: bold; }
             .ktc-curriculum .ktc-section-item.ktc-open > .ktc-section-title:after { content: '-'; }
             .ktc-curriculum .ktc-lesson-list { list-style: none; padding: 0; margin: 0; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; background: #fff; }
@@ -156,12 +156,22 @@ class KTC_Frontend {
             .ktc-outline-section.ktc-open > .ktc-outline-section-title:after { transform: translateY(-50%) rotate(90deg); }
             .ktc-outline-lesson-list { list-style: none; margin: 0; padding: 0; background: #fdfdfd; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
             .ktc-outline-section.ktc-open > .ktc-outline-lesson-list { max-height: 1000px; }
-            .ktc-outline-lesson-list li a { padding: 10px 15px 10px 30px; text-decoration: none; color: #333; display: block; border-top: 1px solid #f0f0f0; transition: background-color 0.2s; }
+            .ktc-outline-lesson-list li a { padding: 10px 15px 10px 30px; text-decoration: none; color: #333; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f0f0f0; transition: background-color 0.2s; }
             .ktc-outline-lesson-list li a:hover { background: #f5f5f5; }
             .ktc-outline-lesson-list .ktc-current-lesson a { background: #e9f5ff; color: #005a9c; font-weight: bold; }
             .ktc-lesson-navigation { display: flex; justify-content: space-between; align-items: center; padding: 1em; border-top: 1px solid #eee; background: rgba(255,255,255,0.98); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-            .ktc-nav-previous, .ktc-nav-next { flex-basis: 50%; }
+            .ktc-nav-previous, .ktc-nav-next { flex-basis: 40%; }
+            .ktc-nav-complete { flex-basis: 20%; text-align: center; }
             .ktc-nav-next { text-align: right; }
+            #ktc-mark-complete-btn { padding: 8px 15px; font-size: 0.9em; cursor: pointer; border-radius: 4px; border: 1px solid #2271b1; background: #2271b1; color: #fff; }
+            #ktc-mark-complete-btn.completed { background: #dff0d8; color: #3c763d; border-color: #d6e9c6; cursor: default; }
+            .ktc-lesson-completed-icon { color: #28a745; font-weight: bold; }
+
+            /* --- Progress Bar --- */
+            .ktc-progress-bar-container { margin: 1.5em 0 0; }
+            .ktc-progress-bar-label { display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px; color: #555; }
+            .ktc-progress-bar-wrapper { background: #e9ecef; border-radius: 4px; overflow: hidden; height: 10px; }
+            .ktc-progress-bar { background: #28a745; height: 100%; width: 0%; transition: width 0.4s ease-in-out; }
 
             /* --- Mobile Responsive Styles --- */
             #ktc-sidebar-toggle { display: none; }
@@ -182,11 +192,22 @@ class KTC_Frontend {
 
             wp_register_script('ktc-frontend-script', false, [], null, true);
             wp_enqueue_script('ktc-frontend-script');
+            
+            // **MODIFICATION**: Localize script for AJAX requests on the lesson page.
+            if (is_singular('lesson')) {
+                wp_localize_script('ktc-frontend-script', 'KTC_Lesson_Data', [
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'nonce'    => wp_create_nonce('ktc_mark_lesson_complete_nonce'),
+                    'lesson_id' => get_the_ID(),
+                    'completed_text' => __('✓ Completed', 'koptann-courses'),
+                ]);
+            }
 
             ob_start();
             ?>
             <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // --- Archive View Toggle ---
                 const gridBtn = document.getElementById('ktc-grid-view-btn');
                 const listBtn = document.getElementById('ktc-list-view-btn');
                 const archive = document.getElementById('ktc-courses-archive');
@@ -205,6 +226,7 @@ class KTC_Frontend {
                     });
                 }
 
+                // --- Accordion for Curriculum/Sidebar ---
                 document.querySelectorAll('.ktc-outline-section-title, .ktc-curriculum .ktc-section-title').forEach(title => {
                     title.addEventListener('click', (e) => {
                         e.preventDefault();
@@ -212,6 +234,7 @@ class KTC_Frontend {
                     });
                 });
 
+                // --- Mobile Sidebar Toggle ---
                 const toggleBtn = document.getElementById('ktc-sidebar-toggle');
                 const overlay = document.getElementById('ktc-sidebar-overlay');
                 const body = document.body;
@@ -220,6 +243,7 @@ class KTC_Frontend {
                     overlay.addEventListener('click', function() { body.classList.remove('ktc-sidebar-open'); });
                 }
 
+                // --- Course Page Tabs ---
                 const tabsContainer = document.querySelector('.ktc-course-tabs');
                 if (tabsContainer) {
                     const navItems = tabsContainer.querySelectorAll('.ktc-tab-nav-item');
@@ -234,6 +258,45 @@ class KTC_Frontend {
                                 panel.id === targetId ? panel.classList.add('active') : panel.classList.remove('active');
                             });
                         });
+                    });
+                }
+
+                // **NEW**: Mark Lesson Complete AJAX Handler
+                const completeBtn = document.getElementById('ktc-mark-complete-btn');
+                if (completeBtn) {
+                    completeBtn.addEventListener('click', function() {
+                        if (this.classList.contains('completed')) return;
+
+                        fetch(KTC_Lesson_Data.ajax_url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({
+                                action: 'ktc_mark_lesson_complete',
+                                security: KTC_Lesson_Data.nonce,
+                                lesson_id: KTC_Lesson_Data.lesson_id
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                completeBtn.classList.add('completed');
+                                completeBtn.textContent = KTC_Lesson_Data.completed_text;
+                                
+                                // Update sidebar icon
+                                const sidebarLink = document.querySelector(`.ktc-outline-lesson-list li[data-lesson-id="${KTC_Lesson_Data.lesson_id}"] a`);
+                                if(sidebarLink && !sidebarLink.querySelector('.ktc-lesson-completed-icon')) {
+                                    sidebarLink.insertAdjacentHTML('afterbegin', '<span class="ktc-lesson-completed-icon">✓</span>');
+                                }
+
+                                // Auto-advance if next lesson exists
+                                if (data.data.next_lesson_url) {
+                                    window.location.href = data.data.next_lesson_url;
+                                }
+                            } else {
+                                alert(data.data.message || 'An error occurred.');
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
                     });
                 }
             });
@@ -341,5 +404,81 @@ class KTC_Frontend {
         set_transient($transient_key, $final_duration, HOUR_IN_SECONDS);
 
         return $final_duration;
+    }
+
+    /**
+     * **NEW**: AJAX handler for marking a lesson as complete.
+     */
+    public function ajax_mark_lesson_complete() {
+        check_ajax_referer('ktc_mark_lesson_complete_nonce', 'security');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => 'You must be logged in.']);
+        }
+
+        $lesson_id = isset($_POST['lesson_id']) ? intval($_POST['lesson_id']) : 0;
+        if (!$lesson_id || 'lesson' !== get_post_type($lesson_id)) {
+            wp_send_json_error(['message' => 'Invalid lesson specified.']);
+        }
+
+        $user_id = get_current_user_id();
+        $course_id = get_post_meta($lesson_id, '_ktc_course_id', true);
+
+        // Get current completed lessons for this course
+        $completed_lessons = get_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, true);
+        if (!is_array($completed_lessons)) {
+            $completed_lessons = [];
+        }
+
+        // Add the current lesson if it's not already there
+        if (!in_array($lesson_id, $completed_lessons)) {
+            $completed_lessons[] = $lesson_id;
+            update_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, $completed_lessons);
+        }
+
+        // Get next lesson for auto-advancement
+        $nav = $this->get_next_prev_lesson($lesson_id);
+        $next_lesson_url = $nav['next'] ? get_permalink($nav['next']->ID) : null;
+
+        wp_send_json_success(['next_lesson_url' => $next_lesson_url]);
+    }
+
+    /**
+     * **NEW**: Helper function to check if a lesson is complete for the current user.
+     */
+    public function is_lesson_complete($lesson_id, $user_id = null) {
+        if (is_null($user_id)) {
+            $user_id = get_current_user_id();
+        }
+        if (!$user_id) return false;
+
+        $course_id = get_post_meta($lesson_id, '_ktc_course_id', true);
+        if (!$course_id) return false;
+
+        $completed_lessons = get_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, true);
+        return is_array($completed_lessons) && in_array($lesson_id, $completed_lessons);
+    }
+
+    /**
+     * **NEW**: Helper function to calculate course completion percentage.
+     */
+    public function get_course_progress($course_id, $user_id = null) {
+        if (is_null($user_id)) {
+            $user_id = get_current_user_id();
+        }
+        if (!$user_id) return 0;
+
+        $all_lessons_query = new WP_Query([
+            'post_type' => 'lesson', 'posts_per_page' => -1, 'post_status' => 'publish',
+            'meta_key' => '_ktc_course_id', 'meta_value' => $course_id, 'fields' => 'ids'
+        ]);
+        $total_lessons = $all_lessons_query->post_count;
+
+        if ($total_lessons === 0) return 0;
+
+        $completed_lessons = get_user_meta($user_id, '_ktc_completed_lessons_' . $course_id, true);
+        $completed_count = is_array($completed_lessons) ? count($completed_lessons) : 0;
+
+        return round(($completed_count / $total_lessons) * 100);
     }
 }

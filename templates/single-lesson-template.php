@@ -11,6 +11,8 @@ if (!$course_id || !($course = get_post($course_id))) {
     wp_die(__('This lesson is not associated with a valid course.', 'koptann-courses'));
 }
 
+$user_id = get_current_user_id();
+
 add_filter('body_class', function($classes) {
     $classes[] = 'ktc-lesson-view-active';
     return $classes;
@@ -41,8 +43,17 @@ get_header();
                         $lessons = get_posts(['post_type' => 'lesson', 'posts_per_page' => -1, 'post_status' => 'publish', 'meta_key' => '_ktc_section_id', 'meta_value' => $section->ID, 'orderby' => 'menu_order', 'order' => 'ASC']);
                         foreach ($lessons as $lesson) {
                             $is_current = ($lesson->ID == $post->ID);
+                            $is_complete = $frontend->is_lesson_complete($lesson->ID, $user_id);
                             $class = $is_current ? 'ktc-current-lesson' : '';
-                            echo '<li class="' . esc_attr($class) . '"><a href="' . esc_url(get_permalink($lesson->ID)) . '">' . esc_html($lesson->post_title) . '</a></li>';
+                            
+                            // **MODIFICATION**: Added data-lesson-id and completion checkmark
+                            echo '<li class="' . esc_attr($class) . '" data-lesson-id="' . esc_attr($lesson->ID) . '">';
+                            echo '<a href="' . esc_url(get_permalink($lesson->ID)) . '">';
+                            if ($is_complete) {
+                                echo '<span class="ktc-lesson-completed-icon">✓</span>';
+                            }
+                            echo esc_html($lesson->post_title);
+                            echo '</a></li>';
                         }
                         echo '</ul></div>';
                     }
@@ -64,12 +75,34 @@ get_header();
     </main>
 </div>
 
-<!-- **MODIFIED**: Moved the navigation footer outside the main content area for correct fixed positioning. -->
 <footer class="ktc-lesson-footer">
-    <?php $nav = $frontend->get_next_prev_lesson($post->ID); ?>
+    <?php 
+    $nav = $frontend->get_next_prev_lesson($post->ID);
+    $is_complete = $frontend->is_lesson_complete($post->ID, $user_id);
+    ?>
     <nav class="ktc-lesson-navigation">
-        <div class="ktc-nav-previous"><?php if ($nav['prev']): ?><a href="<?php echo get_permalink($nav['prev']->ID); ?>" rel="prev">&larr; <?php _e('Previous Lesson', 'koptann-courses'); ?></a><?php else: ?><span></span><?php endif; ?></div>
-        <div class="ktc-nav-next"><?php if ($nav['next']): ?><a href="<?php echo get_permalink($nav['next']->ID); ?>" rel="next"><?php _e('Next Lesson', 'koptann-courses'); ?> &rarr;</a><?php else: ?><span></span><?php endif; ?></div>
+        <div class="ktc-nav-previous">
+            <?php if ($nav['prev']): ?>
+                <a href="<?php echo get_permalink($nav['prev']->ID); ?>" rel="prev">&larr; <?php _e('Previous Lesson', 'koptann-courses'); ?></a>
+            <?php endif; ?>
+        </div>
+        
+        <?php // **NEW**: "Mark as Complete" button logic ?>
+        <div class="ktc-nav-complete">
+            <?php if (is_user_logged_in()): ?>
+                <button id="ktc-mark-complete-btn" class="<?php echo $is_complete ? 'completed' : ''; ?>">
+                    <?php echo $is_complete ? __('✓ Completed', 'koptann-courses') : __('Mark as Complete', 'koptann-courses'); ?>
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <div class="ktc-nav-next">
+            <?php if ($nav['next']): ?>
+                <a href="<?php echo get_permalink($nav['next']->ID); ?>" rel="next"><?php _e('Next Lesson', 'koptann-courses'); ?> &rarr;</a>
+            <?php else: ?>
+                <a href="<?php echo get_permalink($course_id); ?>"><?php _e('Back to Course', 'koptann-courses'); ?> &rarr;</a>
+            <?php endif; ?>
+        </div>
     </nav>
 </footer>
 

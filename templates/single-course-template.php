@@ -12,6 +12,9 @@ $is_free = get_post_meta($post->ID, '_ktc_is_free', true);
 $all_lessons = get_posts(['post_type' => 'lesson', 'posts_per_page' => -1, 'post_status' => 'publish', 'meta_key' => '_ktc_course_id', 'meta_value' => $post->ID, 'fields' => 'ids']);
 $lesson_count = count($all_lessons);
 
+// **NEW**: Get course progress
+$progress = is_user_logged_in() ? $frontend->get_course_progress($post->ID) : 0;
+
 get_header();
 ?>
 
@@ -24,6 +27,8 @@ get_header();
             </div>
             <?php the_title('<h1 class="entry-title">', '</h1>'); ?>
             <div class="ktc-course-top-bar-meta">
+                <?php // **NEW**: Display Author ?>
+                <span>&#128100; <?php printf(__('By %s', 'koptann-courses'), get_the_author()); ?></span>
                 <?php if (!empty($total_duration)) : ?>
                     <span>&#128337; <?php echo esc_html($total_duration); ?></span>
                 <?php endif; ?>
@@ -115,8 +120,21 @@ get_header();
                         <?php endif; ?>
                     </div>
                     <div class="ktc-sidebar-content">
+                        <?php // **NEW**: Progress Bar ?>
+                        <?php if (is_user_logged_in() && $lesson_count > 0) : ?>
+                        <div class="ktc-progress-bar-container">
+                            <div class="ktc-progress-bar-label">
+                                <span><?php _e('Your Progress', 'koptann-courses'); ?></span>
+                                <span><?php echo esc_html($progress); ?>%</span>
+                            </div>
+                            <div class="ktc-progress-bar-wrapper">
+                                <div class="ktc-progress-bar" style="width: <?php echo esc_attr($progress); ?>%;"></div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
                         <?php if ($first_lesson) : ?>
-                            <a href="<?php echo esc_url(get_permalink($first_lesson->ID)); ?>" class="ktc-start-course-btn button"><?php _e('Go to the Course', 'koptann-courses'); ?></a>
+                            <a href="<?php echo esc_url(get_permalink($first_lesson->ID)); ?>" class="ktc-start-course-btn button"><?php echo ($progress > 0 && $progress < 100) ? __('Continue Course', 'koptann-courses') : __('Start Course', 'koptann-courses'); ?></a>
                         <?php endif; ?>
 
                         <ul class="ktc-course-meta">

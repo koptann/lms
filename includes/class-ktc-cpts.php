@@ -16,7 +16,8 @@ class KTC_CPTs {
             'labels'        => ['name' => __('Courses', 'koptann-courses'), 'singular_name' => __('Course', 'koptann-courses'), 'add_new_item' => __('Add New Course', 'koptann-courses')],
             'public'        => true,
             'hierarchical'  => false,
-            'supports'      => ['title', 'editor', 'thumbnail'],
+            // **MODIFICATION**: Added 'author' to the supports array.
+            'supports'      => ['title', 'editor', 'thumbnail', 'author'],
             'taxonomies'    => ['course_category', 'course_tag'],
             'has_archive'   => 'courses',
             'rewrite'       => ['slug' => 'courses', 'with_front' => false],
