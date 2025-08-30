@@ -145,54 +145,55 @@ class KTC_Frontend {
             .ktc-sticky-sidebar .ktc-course-meta li { margin-bottom: 0; display: flex; justify-content: space-between; padding: 0.8em 1em; border-bottom: 1px solid #eee; }
             .ktc-sticky-sidebar .ktc-course-meta li:last-child { border-bottom: none; }
             
-            /* **UX FIX**: Implemented CSS Grid for panels to prevent layout shift and ensure consistent width. */
-            .ktc-course-tabs {
-                display: grid;
-                grid-template-rows: auto 1fr;
-            }
-            .ktc-course-tabs .ktc-tab-nav {
-                grid-row: 1;
-                display: flex;
-                border-bottom: 2px solid #ddd;
-                margin-bottom: 1.5em;
-            }
-            .ktc-course-tabs .ktc-tab-nav-item {
-                flex: 1;
-                text-align: center;
-                padding: 10px 0;
-                cursor: pointer;
-                font-weight: bold;
-                color: #555;
-                border-bottom: 3px solid transparent;
-                margin-right: 0;
-            }
+            .ktc-course-tabs .ktc-tab-nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 1.5em; }
+            .ktc-course-tabs .ktc-tab-nav-item { flex: 1; text-align: center; padding: 10px 0; cursor: pointer; font-weight: bold; color: #555; border-bottom: 3px solid transparent; margin-right: 0; }
             .ktc-course-tabs .ktc-tab-nav-item.active { color: #000; border-bottom-color: #000; }
-            .ktc-course-tabs .ktc-tab-panel {
-                grid-row: 2;
-                grid-column: 1;
-                opacity: 0;
-                visibility: hidden;
-                pointer-events: none;
-                transition: opacity 0.2s ease-in-out, visibility 0s linear 0.2s; /* Fade out transition */
-            }
-            .ktc-course-tabs .ktc-tab-panel.active {
-                opacity: 1;
-                visibility: visible;
-                pointer-events: auto;
-                transition-delay: 0s; /* Fade in transition */
-            }
+            .ktc-tab-panel-wrapper { display: grid; }
+            .ktc-course-tabs .ktc-tab-panel { grid-row: 1; grid-column: 1; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.2s ease-in-out, visibility 0s linear 0.2s; }
+            .ktc-course-tabs .ktc-tab-panel.active { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
 
             .ktc-curriculum h2 { margin-bottom: 1em; font-size: 1.5em; }
             .ktc-curriculum .ktc-section-item { border: 1px solid #ddd; }
             .ktc-curriculum .ktc-section-item + .ktc-section-item { border-top: none; }
-            .ktc-curriculum .ktc-section-title { font-weight: bold; font-size: 1.1em; padding: 15px; background: #f7f7f7; cursor: pointer; position: relative; display: flex; justify-content: space-between; align-items: center; }
-            .ktc-curriculum .ktc-section-meta { font-size: 0.8em; font-weight: normal; color: #555; }
-            .ktc-curriculum .ktc-section-title:after { content: '+'; font-weight: bold; }
-            .ktc-curriculum .ktc-section-item.ktc-open > .ktc-section-title:after { content: '-'; }
+            
+            /* **UX FIX**: Overhauled the section title for better hierarchy and aesthetics. */
+            .ktc-curriculum .ktc-section-title {
+                padding: 12px 15px;
+                background: #f7f7f7;
+                cursor: pointer;
+                position: relative;
+            }
+            .ktc-curriculum .ktc-section-title-text {
+                font-weight: bold;
+                font-size: 1.1em;
+                display: block; /* Make it a block to take full width */
+            }
+            .ktc-curriculum .ktc-section-meta {
+                font-size: 0.85em;
+                font-weight: normal;
+                color: #555;
+                margin-top: 4px;
+                display: block; /* Ensure it appears on its own line */
+            }
+            .ktc-curriculum .ktc-section-title:after {
+                content: '+';
+                font-weight: bold;
+                position: absolute;
+                right: 15px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 1.2em;
+                color: #777;
+            }
+            .ktc-curriculum .ktc-section-item.ktc-open > .ktc-section-title:after {
+                content: '−'; /* Use a proper minus sign */
+            }
+            
             .ktc-curriculum .ktc-lesson-list { list-style: none; padding: 0; margin: 0; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; background: #fff; }
             .ktc-curriculum .ktc-section-item.ktc-open > .ktc-lesson-list { max-height: 1000px; }
             .ktc-curriculum .ktc-lesson-list li { padding: 10px 15px 10px 35px; border-top: 1px solid #eee; position: relative; display: flex; justify-content: space-between; align-items: center; }
-            .ktc-curriculum .ktc-lesson-list li:before { content: '\\25BA'; font-size: 10px; position: absolute; left: 15px; top: 13px; color: #777; }
+            .ktc-curriculum .ktc-lesson-list li:before { content: '\\25BA'; font-size: 10px; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #777; }
+            .ktc-curriculum .ktc-lesson-list .ktc-lesson-title-text { flex-grow: 1; }
             .ktc-curriculum .ktc-lesson-duration { font-size: 0.9em; color: #555; }
             .ktc-course-description h2 { font-size: 1.5em; }
 
